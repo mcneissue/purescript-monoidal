@@ -10,7 +10,8 @@ import Data.Either.Nested (type (\/))
 import Data.Profunctor (class Profunctor, dimap, lcmap, rmap)
 import Data.Profunctor.Joker (Joker(..))
 import Data.Profunctor.Star (Star(..))
-import Data.Tuple (Tuple, curry)
+import Data.Profunctor.Strong (class Strong, first)
+import Data.Tuple (Tuple, curry, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 
 class (Associative l c, Associative r c, Associative o c, Profunctor p) <= Semigroupal c l r o p
@@ -44,6 +45,9 @@ class Profunctor p <= Unital c l r o p
 
 terminal :: forall p a. Unital (->) Unit Unit Unit p => p a Unit
 terminal = lcmap (const unit) $ punit unit
+
+ppure :: forall p a. Unital (->) Unit Unit Unit p => Strong p => p a a
+ppure = dimap (unit /\ _) snd $ first $ (punit unit :: p Unit Unit)
 
 initial :: forall p a. Unital (->) Void Void Unit p => p Void a
 initial = rmap absurd $ punit unit
