@@ -7,6 +7,8 @@ import Control.Alternative (class Alternative, empty)
 import Control.Category.Tensor (class Associative, class Tensor)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
+import Data.Newtype (un)
+import Data.Op (Op(..))
 import Data.Profunctor (class Profunctor, dimap, lcmap, rmap)
 import Data.Profunctor.Joker (Joker(..))
 import Data.Profunctor.Star (Star(..))
@@ -14,30 +16,86 @@ import Data.Profunctor.Strong (class Strong, first)
 import Data.Tuple (Tuple, curry, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 
+dup :: forall a. a -> a /\ a
+dup a = a /\ a
+
+merge :: forall a. a \/ a -> a
+merge = either identity identity
+
+-- {{{ SEMIGROUPAL
+
 class (Associative l c, Associative r c, Associative o c, Profunctor p) <= Semigroupal c l r o p
   where
   pzip :: forall d e f g.
     c (o (p d e) (p f g)) (p (l d f) (r e g))
 
+-- Mux
 mux :: forall p a b c d. Semigroupal (->) Tuple Tuple Tuple p => p a b -> p c d -> p (a /\ c) (b /\ d)
 mux = curry pzip
 
 infixr 5 mux as &&
 
+zip :: forall p x a b. Semigroupal (->) Tuple Tuple Tuple p => p x a -> p x b -> p x (a /\ b)
+zip x y = lcmap dup $ x && y
+
+-- Demux
 demux :: forall p a b c d. Semigroupal (->) Either Either Tuple p => p a b -> p c d -> p (a \/ c) (b \/ d)
 demux = curry pzip
 
 infixr 4 demux as ||
 
+fanin :: forall p x a b. Semigroupal (->) Either Either Tuple p => p a x -> p b x -> p (a \/ b) x
+fanin x y = rmap merge $ x || y
+
+-- Switch
 switch :: forall p a b c d. Semigroupal (->) Tuple Either Tuple p => p a b -> p c d -> p (a /\ c) (b \/ d)
 switch = curry pzip
 
 infixr 5 switch as &|
 
+union :: forall p x a b. Semigroupal (->) Tuple Either Tuple p => p x a -> p x b -> p x (a \/ b)
+union x y = lcmap dup $ x &| y
+
+divide :: forall p x a b. Semigroupal (->) Tuple Either Tuple p => p a x -> p b x -> p (a /\ b) x
+divide x y = rmap merge $ x &| y
+
+-- Splice
 splice :: forall p a b c d. Semigroupal (->) Either Tuple Tuple p => p a b -> p c d -> p (a \/ c) (b /\ d)
 splice = curry pzip
 
 infixr 5 splice as |&
+
+-- Comux
+comux :: forall p a b c d. Semigroupal Op Tuple Tuple Tuple p => p (a /\ c) (b /\ d) -> p a b /\ p c d
+comux = un Op pzip
+
+undivide :: forall p x a b. Semigroupal Op Tuple Tuple Tuple p => p (a /\ b) x -> p a x /\ p b x
+undivide = comux <<< rmap dup
+
+-- Codemux
+codemux :: forall p a b c d. Semigroupal Op Either Either Tuple p => p (a \/ c) (b \/ d) -> p a b /\ p c d
+codemux = un Op pzip
+
+partition :: forall p x a b. Semigroupal Op Either Either Tuple p => p x (a \/ b) -> p x a /\ p x b
+partition = codemux <<< lcmap merge
+
+-- Coswitch
+coswitch :: forall p a b c d. Semigroupal Op Either Tuple Tuple p => p (a \/ c) (b /\ d) -> p a b /\ p c d
+coswitch = un Op pzip
+
+unfanin :: forall p x a b. Semigroupal Op Either Tuple Tuple p => p (a \/ b) x -> p a x /\ p b x
+unfanin = coswitch <<< rmap dup
+
+unzip :: forall p x a b. Semigroupal Op Either Tuple Tuple p => p x (a /\ b) -> p x a /\ p x b
+unzip = coswitch <<< lcmap merge
+
+-- Cosplice
+cosplice :: forall p a b c d. Semigroupal Op Tuple Either Tuple p => p (a /\ c) (b \/ d) -> p a b /\ p c d
+cosplice = un Op pzip
+
+-- }}}
+
+-- {{{ UNITAL
 
 class Profunctor p <= Unital c l r o p
   where
@@ -58,9 +116,15 @@ poly = dimap (const unit) absurd $ punit unit
 mono :: forall p. Unital (->) Void Unit Unit p => p Void Unit
 mono = punit unit
 
+-- }}}
+
+-- {{{ MONOIDAL
+
 class (Tensor l il c, Tensor r ir c, Tensor o io c, Semigroupal c l r o p, Unital c il ir io p) <= Monoidal c l il r ir o io p
 
--- Instances
+-- }}}
+
+-- {{{ INSTANCES
 
 -- Joker
 instance ttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Joker f) where
@@ -111,3 +175,5 @@ instance eeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) wh
   punit = absurd
 
 instance eeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
+
+-- }}}
