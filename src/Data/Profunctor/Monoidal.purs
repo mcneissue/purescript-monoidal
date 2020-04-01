@@ -127,53 +127,55 @@ class (Tensor l il c, Tensor r ir c, Tensor o io c, Semigroupal c l r o p, Unita
 -- {{{ INSTANCES
 
 -- Joker
-instance ttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Joker f) where
+instance tttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Joker f) where
   pzip (Joker f /\ Joker g) = Joker $ (/\) <$> f <*> g
 
-instance ttUnitalJoker :: Applicative f => Unital (->) Unit Unit Unit (Joker f) where
+instance tttUnitalJoker :: Applicative f => Unital (->) Unit Unit Unit (Joker f) where
   punit = Joker <<< pure
 
-instance ttMonoidalJoker :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Joker f)
+instance tttMonoidalJoker :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Joker f)
 
-instance etSemigroupalJoker :: Alt f => Semigroupal (->) Either Either Tuple (Joker f) where
+instance eetSemigroupalJoker :: Alt f => Semigroupal (->) Either Either Tuple (Joker f) where
   pzip (Joker f /\ Joker g) = Joker $ (Left <$> f) <|> (Right <$> g)
 
-instance etUnitalJoker :: Alternative f => Unital (->) Void Void Unit (Joker f) where
+instance eetUnitalJoker :: Alternative f => Unital (->) Void Void Unit (Joker f) where
   punit = const $ Joker $ empty
 
-instance etMonoidalJoker :: Alternative f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
+instance eetMonoidalJoker :: Alternative f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
 
-instance eeSemigroupalJoker :: Functor f => Semigroupal (->) Either Either Either (Joker f) where
+instance eeeSemigroupalJoker :: Functor f => Semigroupal (->) Either Either Either (Joker f) where
   pzip (Left (Joker f)) = Joker $ map Left f
   pzip (Right (Joker f)) = Joker $ map Right f
 
-instance eeUnitalJoker :: Functor f => Unital (->) Void Void Void (Joker f) where
+instance eeeUnitalJoker :: Functor f => Unital (->) Void Void Void (Joker f) where
   punit = absurd
 
-instance eeMonoidalJoker :: Functor f => Monoidal (->) Either Void Either Void Either Void (Joker f)
+instance eeeMonoidalJoker :: Functor f => Monoidal (->) Either Void Either Void Either Void (Joker f)
 
 -- Star
-instance ttSemigroupalStar :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Star f) where
+instance tttSemigroupalStar :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Star f) where
   pzip (Star f /\ Star g) = Star $ \(a /\ b) -> (/\) <$> f a <*> g b
 
-instance ttUnitalStar :: Applicative f => Unital (->) Unit Unit Unit (Star f) where
+instance tttUnitalStar :: Applicative f => Unital (->) Unit Unit Unit (Star f) where
   punit = const $ Star $ pure
 
-instance ttMonoidalStar :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Star f)
+instance tttMonoidalStar :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Star f)
 
-instance etSemigroupalStar :: Functor f => Semigroupal (->) Either Either Tuple (Star f) where
+instance eetSemigroupalStar :: Functor f => Semigroupal (->) Either Either Tuple (Star f) where
   pzip (Star f /\ Star g) = Star $ either (map Left <<< f) (map Right <<< g)
 
-instance etMonoidalStar :: Functor f => Unital (->) Void Void Unit (Star f) where
+instance eetUnitalStar :: Functor f => Unital (->) Void Void Unit (Star f) where
   punit = const $ Star $ absurd
 
-instance eeSemigroupalStar :: Alternative f => Semigroupal (->) Either Either Either (Star f) where
+instance eetMonoidalStar :: Functor f => Monoidal (->) Either Void Either Void Tuple Unit (Star f)
+
+instance eeeSemigroupalStar :: Alternative f => Semigroupal (->) Either Either Either (Star f) where
   pzip (Left (Star f)) = Star $ either (map Left <<< f) (const empty)
   pzip (Right (Star f)) = Star $ either (const empty) (map Right <<< f)
 
-instance eeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) where
+instance eeeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) where
   punit = absurd
 
-instance eeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
+instance eeeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
 
 -- }}}
