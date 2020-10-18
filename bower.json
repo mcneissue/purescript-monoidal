@@ -1,0 +1,22 @@
+{
+    "name": "purescript-profunctor-extra",
+    "license": [
+        "MIT"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mcneissue/purescript-profunctor-extra"
+    },
+    "ignore": [
+        "**/.*",
+        "node_modules",
+        "bower_components",
+        "output"
+    ],
+    "dependencies": {
+        "purescript-effect": "^v2.0.1",
+        "purescript-either": "^v4.1.1",
+        "purescript-profunctor": "^v4.1.0",
+        "purescript-tuples": "^v5.1.0"
+    }
+}

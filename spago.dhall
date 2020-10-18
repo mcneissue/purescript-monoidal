@@ -6,4 +6,7 @@ You can edit this file as you like.
 , dependencies = [ "profunctor", "either", "tuples", "effect" ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, license = "MIT"
+, repository = "https://github.com/mcneissue/purescript-profunctor-extra"
 }
+
