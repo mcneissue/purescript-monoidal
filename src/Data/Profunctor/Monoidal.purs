@@ -7,12 +7,12 @@ import Control.Alternative (class Alternative, empty)
 import Control.Category.Tensor (class Associative, class Tensor)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
-import Data.Newtype (un)
+import Data.Newtype (un, class Newtype)
 import Data.Op (Op(..))
 import Data.Profunctor (class Profunctor, dimap, lcmap, rmap)
 import Data.Profunctor.Joker (Joker(..))
 import Data.Profunctor.Star (Star(..))
-import Data.Profunctor.Strong (class Strong, first)
+import Data.Profunctor.Strong (class Strong, first, second)
 import Data.Tuple (Tuple, curry, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 
@@ -177,5 +177,26 @@ instance eeeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) w
   punit = absurd
 
 instance eeeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
+
+-- Strong Category
+
+newtype StrongCategory p a b = StrongCategory (p a b)
+
+derive instance newtypeStrongCategory :: Newtype (StrongCategory p a b) _
+
+derive newtype instance profunctorStrongCategory :: Profunctor p => Profunctor (StrongCategory p)
+derive newtype instance strongStrongCateogry :: Strong p => Strong (StrongCategory p)
+derive newtype instance semigroupoidStrongCategory :: Semigroupoid p => Semigroupoid (StrongCategory p)
+derive newtype instance categoryStrongCategory :: Category p => Category (StrongCategory p)
+
+-- Every Strong Category is Muxable
+
+instance tttSemigroupalStrongCategory :: (Strong p, Semigroupoid p) => Semigroupal (->) Tuple Tuple Tuple (StrongCategory p) where
+  pzip (StrongCategory pab /\ StrongCategory pcd) = StrongCategory (second pcd <<< first pab)
+
+instance tttUnitalStrongCategory :: (Profunctor p, Category p) => Unital (->) Unit Unit Unit (StrongCategory p) where
+  punit _ = StrongCategory identity
+
+instance tttMonoidalStrongCategory :: (Strong p, Category p) => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (StrongCategory p)
 
 -- }}}
