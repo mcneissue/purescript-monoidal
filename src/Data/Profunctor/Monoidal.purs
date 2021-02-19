@@ -24,7 +24,7 @@ merge = either identity identity
 
 -- {{{ SEMIGROUPAL
 
-class (Associative l c, Associative r c, Associative o c, Profunctor p) <= Semigroupal c l r o p
+class (Associative l c, Associative r c, Associative o c) <= Semigroupal c l r o p
   where
   pzip :: forall d e f g.
     c (o (p d e) (p f g)) (p (l d f) (r e g))
@@ -35,7 +35,7 @@ mux = curry pzip
 
 infixr 5 mux as &&
 
-zip :: forall p x a b. Semigroupal (->) Tuple Tuple Tuple p => p x a -> p x b -> p x (a /\ b)
+zip :: forall p x a b. Profunctor p => Semigroupal (->) Tuple Tuple Tuple p => p x a -> p x b -> p x (a /\ b)
 zip x y = lcmap dup $ x && y
 
 -- Demux
@@ -44,7 +44,7 @@ demux = curry pzip
 
 infixr 4 demux as ||
 
-fanin :: forall p x a b. Semigroupal (->) Either Either Tuple p => p a x -> p b x -> p (a \/ b) x
+fanin :: forall p x a b. Profunctor p => Semigroupal (->) Either Either Tuple p => p a x -> p b x -> p (a \/ b) x
 fanin x y = rmap merge $ x || y
 
 -- Switch
@@ -53,10 +53,10 @@ switch = curry pzip
 
 infixr 5 switch as &|
 
-union :: forall p x a b. Semigroupal (->) Tuple Either Tuple p => p x a -> p x b -> p x (a \/ b)
+union :: forall p x a b. Profunctor p => Semigroupal (->) Tuple Either Tuple p => p x a -> p x b -> p x (a \/ b)
 union x y = lcmap dup $ x &| y
 
-divide :: forall p x a b. Semigroupal (->) Tuple Either Tuple p => p a x -> p b x -> p (a /\ b) x
+divide :: forall p x a b. Profunctor p => Semigroupal (->) Tuple Either Tuple p => p a x -> p b x -> p (a /\ b) x
 divide x y = rmap merge $ x &| y
 
 -- Splice
@@ -69,24 +69,24 @@ infixr 5 splice as |&
 comux :: forall p a b c d. Semigroupal Op Tuple Tuple Tuple p => p (a /\ c) (b /\ d) -> p a b /\ p c d
 comux = un Op pzip
 
-undivide :: forall p x a b. Semigroupal Op Tuple Tuple Tuple p => p (a /\ b) x -> p a x /\ p b x
+undivide :: forall p x a b. Profunctor p => Semigroupal Op Tuple Tuple Tuple p => p (a /\ b) x -> p a x /\ p b x
 undivide = comux <<< rmap dup
 
 -- Codemux
 codemux :: forall p a b c d. Semigroupal Op Either Either Tuple p => p (a \/ c) (b \/ d) -> p a b /\ p c d
 codemux = un Op pzip
 
-partition :: forall p x a b. Semigroupal Op Either Either Tuple p => p x (a \/ b) -> p x a /\ p x b
+partition :: forall p x a b. Profunctor p => Semigroupal Op Either Either Tuple p => p x (a \/ b) -> p x a /\ p x b
 partition = codemux <<< lcmap merge
 
 -- Coswitch
 coswitch :: forall p a b c d. Semigroupal Op Either Tuple Tuple p => p (a \/ c) (b /\ d) -> p a b /\ p c d
 coswitch = un Op pzip
 
-unfanin :: forall p x a b. Semigroupal Op Either Tuple Tuple p => p (a \/ b) x -> p a x /\ p b x
+unfanin :: forall p x a b. Profunctor p => Semigroupal Op Either Tuple Tuple p => p (a \/ b) x -> p a x /\ p b x
 unfanin = coswitch <<< rmap dup
 
-unzip :: forall p x a b. Semigroupal Op Either Tuple Tuple p => p x (a /\ b) -> p x a /\ p x b
+unzip :: forall p x a b. Profunctor p => Semigroupal Op Either Tuple Tuple p => p x (a /\ b) -> p x a /\ p x b
 unzip = coswitch <<< lcmap merge
 
 -- Cosplice
@@ -97,20 +97,20 @@ cosplice = un Op pzip
 
 -- {{{ UNITAL
 
-class Profunctor p <= Unital c l r o p
+class Unital c l r o p
   where
   punit :: c o (p l r)
 
-terminal :: forall p a. Unital (->) Unit Unit Unit p => p a Unit
+terminal :: forall p a. Profunctor p => Unital (->) Unit Unit Unit p => p a Unit
 terminal = lcmap (const unit) $ punit unit
 
-ppure :: forall p a. Unital (->) Unit Unit Unit p => Strong p => p a a
+ppure :: forall p a. Profunctor p => Unital (->) Unit Unit Unit p => Strong p => p a a
 ppure = dimap (unit /\ _) snd $ first $ (punit unit :: p Unit Unit)
 
-initial :: forall p a. Unital (->) Void Void Unit p => p Void a
+initial :: forall p a. Profunctor p => Unital (->) Void Void Unit p => p Void a
 initial = rmap absurd $ punit unit
 
-poly :: forall p a b. Unital (->) Unit Void Unit p => p a b
+poly :: forall p a b. Profunctor p => Unital (->) Unit Void Unit p => p a b
 poly = dimap (const unit) absurd $ punit unit
 
 mono :: forall p. Unital (->) Void Unit Unit p => p Void Unit
