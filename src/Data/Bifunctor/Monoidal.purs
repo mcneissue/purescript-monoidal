@@ -5,7 +5,7 @@ import Prelude hiding ((&&),(||))
 import Control.Alt (class Alt, (<|>))
 import Control.Alternative (class Alternative, empty)
 import Control.Biapply (biapply)
-import Control.Category.Tensor (class Associative, class Tensor, assoc, lunit, swap)
+import Control.Category.Tensor (class Associative, class Tensor, assoc, runit, swap)
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
@@ -190,33 +190,7 @@ instance trivial :: Profunctor p => Semigroupal (->) Tuple Either Either p
   where
   pzip = either (dimap fst Left) (dimap snd Right)
 
--- If `t` is some tensor, `t` is a monoidal functor from `t, t` to `t`, so we
--- should have appropriate instances for tuples and eithers
-
--- Tuples
-instance tttsemigroupalTuple :: Semigroupal (->) Tuple Tuple Tuple Tuple
-  where
-  pzip = assoc.fwd <<< map (assoc.bwd <<< lmap swap <<< assoc.fwd) <<< assoc.bwd
-
-instance tttunitalTuple :: Unital (->) Unit Unit Unit Tuple
-  where
-  punit = lunit.bwd
-
-instance tttMonoidalTuple :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit Tuple
-
--- Eithers
-instance eeeSemigroupalEither :: Semigroupal (->) Either Either Either Either
-  where
-  pzip = assoc.fwd <<< map (assoc.bwd <<< lmap swap <<< assoc.fwd) <<< assoc.bwd
-
-instance eeeUnitalEither :: Unital (->) Void Void Void Either
-  where
-  punit = lunit.bwd
-
-instance eeeMonoidalEither :: Monoidal (->) Either Void Either Void Either Void Either
-
 -- Strong Category
-
 newtype StrongCategory p a b = StrongCategory (p a b)
 
 derive instance newtypeStrongCategory :: Newtype (StrongCategory p a b) _
@@ -227,7 +201,6 @@ derive newtype instance semigroupoidStrongCategory :: Semigroupoid p => Semigrou
 derive newtype instance categoryStrongCategory :: Category p => Category (StrongCategory p)
 
 -- Every Strong Category is Muxable
-
 instance tttSemigroupalStrongCategory :: (Strong p, Semigroupoid p) => Semigroupal (->) Tuple Tuple Tuple (StrongCategory p) where
   pzip (StrongCategory pab /\ StrongCategory pcd) = StrongCategory (second pcd <<< first pab)
 
@@ -235,6 +208,77 @@ instance tttUnitalStrongCategory :: (Profunctor p, Category p) => Unital (->) Un
   punit _ = StrongCategory identity
 
 instance tttMonoidalStrongCategory :: (Strong p, Category p) => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (StrongCategory p)
+
+-- }}}
+
+-- {{{ TUPLE
+
+-- {{{ MUX
+
+-- If `t` is some tensor, `t` is a monoidal functor from `t, t` to `t`
+
+instance tttsemigroupalTuple :: Semigroupal (->) Tuple Tuple Tuple Tuple
+  where
+  pzip = assoc.fwd <<< map (assoc.bwd <<< lmap swap <<< assoc.fwd) <<< assoc.bwd
+
+instance tttunitalTuple :: Unital (->) Unit Unit Unit Tuple
+  where
+  punit = runit.bwd
+
+instance tttMonoidalTuple :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit Tuple
+
+-- }}}
+
+-- {{{ DIVERGE
+
+instance eeeSemigroupalTuple :: Semigroupal (->) Either Either Either Tuple
+  where
+  pzip = either (bimap Left Left) (bimap Right Right)
+
+instance eeeUnitalTuple :: Unital (->) Void Void Void Tuple
+  where
+  punit = absurd
+
+instance eeeMonoidalTuple :: Monoidal (->) Either Void Either Void Either Void Tuple
+
+-- }}}
+
+-- }}}
+
+-- {{{ EITHER
+
+-- {{{ DIVERGE
+
+-- If `t` is some tensor, `t` is a monoidal functor from `t, t` to `t`
+
+instance eeeSemigroupalEither :: Semigroupal (->) Either Either Either Either
+  where
+  pzip = assoc.fwd <<< map (assoc.bwd <<< lmap swap <<< assoc.fwd) <<< assoc.bwd
+
+instance eeeUnitalEither :: Unital (->) Void Void Void Either
+  where
+  punit = runit.bwd
+
+instance eeeMonoidalEither :: Monoidal (->) Either Void Either Void Either Void Either
+
+-- }}}
+
+-- {{{ SPLICE
+
+instance ettSemigroupalEither :: Semigroupal (->) Either Tuple Tuple Either
+  where
+  pzip (e1 /\ e2) = (/\) <$> lmap Left e1 <*> lmap Right e2
+
+instance ettUnitalEither :: Unital (->) Void Unit Unit Either
+  where
+  punit = pure
+
+instance ettMonoidalEither :: Monoidal (->) Either Void Tuple Unit Tuple Unit Either
+
+-- }}}
+
+-- NB: There is no point in doing both `×, +` and `+, ×` for a symmetric bifunctor, you can just get one from
+-- the other using swap
 
 -- }}}
 
