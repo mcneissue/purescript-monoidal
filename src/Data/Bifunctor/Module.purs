@@ -1,4 +1,4 @@
-module Data.Bifunctor.Bimodule where
+module Data.Bifunctor.Module where
 
 class LeftModule c l r p
   where
