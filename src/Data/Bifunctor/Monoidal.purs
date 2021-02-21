@@ -5,7 +5,7 @@ import Prelude hiding ((&&),(||))
 import Control.Alt (class Alt, (<|>))
 import Control.Alternative (class Alternative, empty)
 import Control.Biapply (biapply)
-import Control.Category.Tensor (class Associative, class Tensor, assoc, runit, swap)
+import Control.Category.Tensor (class Associative, class Tensor, assoc, dup, merge, runit, swap)
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
@@ -18,12 +18,6 @@ import Data.Profunctor.Star (Star(..))
 import Data.Profunctor.Strong (class Strong, first, second)
 import Data.Tuple (Tuple, curry, fst, snd)
 import Data.Tuple.Nested (type (/\), (/\))
-
-dup :: ∀ a. a -> a /\ a
-dup a = a /\ a
-
-merge :: ∀ a. a \/ a -> a
-merge = either identity identity
 
 -- {{{ SEMIGROUPAL
 
