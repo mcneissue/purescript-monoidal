@@ -2,8 +2,8 @@ module Data.Bifunctor.Monoidal where
 
 import Prelude hiding ((&&),(||))
 
-import Control.Alt (class Alt, (<|>))
-import Control.Alternative (class Alternative, empty)
+import Control.Alt (class Alt, alt, (<|>))
+import Control.Alternative (class Plus, empty)
 import Control.Biapply (biapply)
 import Control.Category.Tensor (class Associative, class Tensor, assoc, dup, merge, runit, swap)
 import Data.Bifunctor (bimap, lmap)
@@ -323,10 +323,10 @@ instance tttMonoidalJoker :: Applicative f => Monoidal (->) Tuple Unit Tuple Uni
 instance eetSemigroupalJoker :: Alt f => Semigroupal (->) Either Either Tuple (Joker f) where
   combine (Joker f /\ Joker g) = Joker $ (Left <$> f) <|> (Right <$> g)
 
-instance eetUnitalJoker :: Alternative f => Unital (->) Void Void Unit (Joker f) where
+instance eetUnitalJoker :: Plus f => Unital (->) Void Void Unit (Joker f) where
   introduce = const $ Joker $ empty
 
-instance eetMonoidalJoker :: Alternative f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
+instance eetMonoidalJoker :: Plus f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
 
 -- }}}
 
@@ -373,14 +373,26 @@ instance eetMonoidalStar :: Functor f => Monoidal (->) Either Void Either Void T
 
 -- {{{ DIVERGE
 
-instance eeeSemigroupalStar :: Alternative f => Semigroupal (->) Either Either Either (Star f) where
+instance eeeSemigroupalStar :: Plus f => Semigroupal (->) Either Either Either (Star f) where
   combine (Left (Star f)) = Star $ either (map Left <<< f) (const empty)
   combine (Right (Star f)) = Star $ either (const empty) (map Right <<< f)
 
-instance eeeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) where
+instance eeeUnitalStar :: Plus f => Unital (->) Void Void Void (Star f) where
   introduce = absurd
 
-instance eeeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
+instance eeeMonoidalStar :: Plus f => Monoidal (->) Either Void Either Void Either Void (Star f)
+
+-- }}}
+
+-- {{{ SWITCH
+
+instance tetSemigroupalStar :: Alt f => Semigroupal (->) Tuple Either Tuple (Star f) where
+  combine (Star f /\ Star g) = Star $ \(x /\ y) -> alt (Left <$> f x) (Right <$> g y)
+
+instance tetUnitalStar :: Plus f => Unital (->) Unit Void Unit (Star f) where
+  introduce = const $ Star $ const empty
+
+instance tetMonoidalStar :: Plus f => Monoidal (->) Tuple Unit Either Void Tuple Unit (Star f)
 
 -- }}}
 
