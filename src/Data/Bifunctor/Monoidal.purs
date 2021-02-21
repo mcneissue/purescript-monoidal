@@ -1,4 +1,4 @@
-module Data.Profunctor.Monoidal where
+module Data.Bifunctor.Monoidal where
 
 import Prelude hiding ((&&),(||))
 

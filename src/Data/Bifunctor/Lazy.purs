@@ -1,4 +1,4 @@
-module Data.Profunctor.Lazy where
+module Data.Bifunctor.Lazy where
 
 import Data.Unit (Unit)
 
