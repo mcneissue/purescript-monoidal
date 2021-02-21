@@ -1,10 +1,12 @@
 module Data.Profunctor.Monoidal where
 
-import Prelude
+import Prelude hiding ((&&),(||))
 
 import Control.Alt (class Alt, (<|>))
 import Control.Alternative (class Alternative, empty)
+import Control.Biapply (biapply)
 import Control.Category.Tensor (class Associative, class Tensor)
+import Data.Bifunctor (bimap)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
 import Data.Newtype (un, class Newtype)
@@ -125,6 +127,24 @@ class (Tensor l il c, Tensor r ir c, Tensor o io c, Semigroupal c l r o p, Unita
 -- }}}
 
 -- {{{ INSTANCES
+
+-- Function
+
+instance tttSemigroupalFunction :: Semigroupal (->) Tuple Tuple Tuple (->) where
+  pzip = biapply
+
+instance tttUnitalFunction :: Unital (->) Unit Unit Unit (->) where
+  punit = pure
+
+instance tttMonoidalFunction :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (->)
+
+instance eetSemigroupalFunction :: Semigroupal (->) Either Either Tuple (->) where
+  pzip (f /\ g) = bimap f g
+
+instance eetUnitalFunction :: Unital (->) Void Void Unit (->) where
+  punit = const absurd
+
+instance eetMonoidalFunction :: Monoidal (->) Either Void Either Void Tuple Unit (->)
 
 -- Joker
 instance tttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Joker f) where
