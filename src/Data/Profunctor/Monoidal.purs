@@ -5,17 +5,18 @@ import Prelude hiding ((&&),(||))
 import Control.Alt (class Alt, (<|>))
 import Control.Alternative (class Alternative, empty)
 import Control.Biapply (biapply)
-import Control.Category.Tensor (class Associative, class Tensor)
-import Data.Bifunctor (bimap)
+import Control.Category.Tensor (class Associative, class Tensor, assoc, lunit, swap)
+import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
+import Data.Maybe (Maybe, maybe)
 import Data.Newtype (un, class Newtype)
 import Data.Op (Op(..))
 import Data.Profunctor (class Profunctor, dimap, lcmap, rmap)
 import Data.Profunctor.Joker (Joker(..))
 import Data.Profunctor.Star (Star(..))
 import Data.Profunctor.Strong (class Strong, first, second)
-import Data.Tuple (Tuple, curry, snd)
+import Data.Tuple (Tuple, curry, fst, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 
 dup :: ∀ a. a -> a /\ a
@@ -30,6 +31,13 @@ class (Associative l c, Associative r c, Associative o c) <= Semigroupal c l r o
   where
   pzip :: ∀ d e f g.
     c (o (p d e) (p f g)) (p (l d f) (r e g))
+
+-- Mux     = (×) (×) (×)
+-- Demux   = (+) (+) (×)
+-- Switch  = (×) (+) (×)
+-- Splice  = (+) (×) (×)
+-- Diverge = (+) (+) (+)
+-- Trivial = (×) (+) (+)
 
 -- Mux
 mux :: ∀ p a b c d. Semigroupal (->) Tuple Tuple Tuple p => p a b -> p c d -> p (a /\ c) (b /\ d)
@@ -66,6 +74,53 @@ splice :: ∀ p a b c d. Semigroupal (->) Either Tuple Tuple p => p a b -> p c d
 splice = curry pzip
 
 infixr 5 splice as |&
+
+-- Diverge
+diverge :: ∀ p a b c d. Semigroupal (->) Either Either Either p => p a b \/ p c d -> p (a \/ c) (b \/ d)
+diverge = pzip
+
+contramapMaybe :: ∀ p a b x. Profunctor p => Semigroupal (->) Either Either Either p => (a -> Maybe b) -> p b x -> p a x
+contramapMaybe f = dimap (maybe (Right unit) Left <<< f) merge <<< ultraleft
+
+-- {{{ ULTRA STRENGTHS
+
+-- NB: The thing to notice about these is that in a profunctor, there is a "trivially monoidal" tensor on each source category
+-- On the contravariant end, this is the (/\) tensor, on the covariant end it is the (\/) tensor. When we take the output tensor
+-- to be (\/), we can pick the source tensors in two ways such that precisely one is trivial and one is not. Doing this twice lets
+-- us "dodge" a quantified variable past the variables of an actual `p a b`, so that you get a `p a b -> p (t1 a x) (t2 b x)`, i.e.
+-- a strength.
+
+zig :: ∀ p t a b x. Profunctor p => Semigroupal (->) Tuple t Either p => p x a \/ p x b -> p x (t a b)
+zig = lcmap dup <<< pzip
+
+zag :: ∀ p t a b x. Profunctor p => Semigroupal (->) t Either Either p => p a x \/ p b x -> p (t a b) x
+zag = rmap merge <<< pzip
+
+ultrafirst :: ∀ p a b x y.
+  Profunctor p =>
+  Semigroupal (->) Tuple Tuple  Either p =>
+  p a b -> p (a /\ x) (b /\ y)
+ultrafirst = zag <<< Left <<< zig <<< Left
+
+ultrasecond :: ∀ p a b x y.
+  Profunctor p =>
+  Semigroupal (->) Tuple Tuple  Either p =>
+  p a b -> p (x /\ a) (y /\ b)
+ultrasecond = zag <<< Right <<< zig <<< Right
+
+ultraleft :: ∀ p a b x y.
+  Profunctor p =>
+  Semigroupal (->) Either Either Either p =>
+  p a b -> p (a \/ x) (b \/ y)
+ultraleft = zag <<< Left <<< zig <<< Left
+
+ultraright :: ∀ p a b x y.
+  Profunctor p =>
+  Semigroupal (->) Either Either Either p =>
+  p a b -> p (x \/ a) (y \/ b)
+ultraright = zag <<< Right <<< zig <<< Right
+
+-- }}}
 
 -- Comux
 comux :: ∀ p a b c d. Semigroupal Op Tuple Tuple Tuple p => p (a /\ c) (b /\ d) -> p a b /\ p c d
@@ -128,75 +183,37 @@ class (Tensor l il c, Tensor r ir c, Tensor o io c, Semigroupal c l r o p, Unita
 
 -- {{{ INSTANCES
 
--- Function
+-- {{{ ABSTRACT
 
-instance tttSemigroupalFunction :: Semigroupal (->) Tuple Tuple Tuple (->) where
-  pzip = biapply
+-- This class of monoidal functors is trivial
+instance trivial :: Profunctor p => Semigroupal (->) Tuple Either Either p
+  where
+  pzip = either (dimap fst Left) (dimap snd Right)
 
-instance tttUnitalFunction :: Unital (->) Unit Unit Unit (->) where
-  punit = pure
+-- If `t` is some tensor, `t` is a monoidal functor from `t, t` to `t`, so we
+-- should have appropriate instances for tuples and eithers
 
-instance tttMonoidalFunction :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (->)
+-- Tuples
+instance tttsemigroupalTuple :: Semigroupal (->) Tuple Tuple Tuple Tuple
+  where
+  pzip = assoc.fwd <<< map (assoc.bwd <<< lmap swap <<< assoc.fwd) <<< assoc.bwd
 
-instance eetSemigroupalFunction :: Semigroupal (->) Either Either Tuple (->) where
-  pzip (f /\ g) = bimap f g
+instance tttunitalTuple :: Unital (->) Unit Unit Unit Tuple
+  where
+  punit = lunit.bwd
 
-instance eetUnitalFunction :: Unital (->) Void Void Unit (->) where
-  punit = const absurd
+instance tttMonoidalTuple :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit Tuple
 
-instance eetMonoidalFunction :: Monoidal (->) Either Void Either Void Tuple Unit (->)
+-- Eithers
+instance eeeSemigroupalEither :: Semigroupal (->) Either Either Either Either
+  where
+  pzip = assoc.fwd <<< map (assoc.bwd <<< lmap swap <<< assoc.fwd) <<< assoc.bwd
 
--- Joker
-instance tttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Joker f) where
-  pzip (Joker f /\ Joker g) = Joker $ (/\) <$> f <*> g
+instance eeeUnitalEither :: Unital (->) Void Void Void Either
+  where
+  punit = lunit.bwd
 
-instance tttUnitalJoker :: Applicative f => Unital (->) Unit Unit Unit (Joker f) where
-  punit = Joker <<< pure
-
-instance tttMonoidalJoker :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Joker f)
-
-instance eetSemigroupalJoker :: Alt f => Semigroupal (->) Either Either Tuple (Joker f) where
-  pzip (Joker f /\ Joker g) = Joker $ (Left <$> f) <|> (Right <$> g)
-
-instance eetUnitalJoker :: Alternative f => Unital (->) Void Void Unit (Joker f) where
-  punit = const $ Joker $ empty
-
-instance eetMonoidalJoker :: Alternative f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
-
-instance eeeSemigroupalJoker :: Functor f => Semigroupal (->) Either Either Either (Joker f) where
-  pzip (Left (Joker f)) = Joker $ map Left f
-  pzip (Right (Joker f)) = Joker $ map Right f
-
-instance eeeUnitalJoker :: Functor f => Unital (->) Void Void Void (Joker f) where
-  punit = absurd
-
-instance eeeMonoidalJoker :: Functor f => Monoidal (->) Either Void Either Void Either Void (Joker f)
-
--- Star
-instance tttSemigroupalStar :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Star f) where
-  pzip (Star f /\ Star g) = Star $ \(a /\ b) -> (/\) <$> f a <*> g b
-
-instance tttUnitalStar :: Applicative f => Unital (->) Unit Unit Unit (Star f) where
-  punit = const $ Star $ pure
-
-instance tttMonoidalStar :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Star f)
-
-instance eetSemigroupalStar :: Functor f => Semigroupal (->) Either Either Tuple (Star f) where
-  pzip (Star f /\ Star g) = Star $ either (map Left <<< f) (map Right <<< g)
-
-instance eetUnitalStar :: Functor f => Unital (->) Void Void Unit (Star f) where
-  punit = const $ Star $ absurd
-
-instance eetMonoidalStar :: Functor f => Monoidal (->) Either Void Either Void Tuple Unit (Star f)
-
-instance eeeSemigroupalStar :: Alternative f => Semigroupal (->) Either Either Either (Star f) where
-  pzip (Left (Star f)) = Star $ either (map Left <<< f) (const empty)
-  pzip (Right (Star f)) = Star $ either (const empty) (map Right <<< f)
-
-instance eeeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) where
-  punit = absurd
-
-instance eeeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
+instance eeeMonoidalEither :: Monoidal (->) Either Void Either Void Either Void Either
 
 -- Strong Category
 
@@ -218,5 +235,117 @@ instance tttUnitalStrongCategory :: (Profunctor p, Category p) => Unital (->) Un
   punit _ = StrongCategory identity
 
 instance tttMonoidalStrongCategory :: (Strong p, Category p) => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (StrongCategory p)
+
+-- }}}
+
+-- {{{ FUNCTION
+
+-- {{{ MUX
+
+instance tttSemigroupalFunction :: Semigroupal (->) Tuple Tuple Tuple (->) where
+  pzip = biapply
+
+instance tttUnitalFunction :: Unital (->) Unit Unit Unit (->) where
+  punit = pure
+
+instance tttMonoidalFunction :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (->)
+
+-- }}}
+
+-- {{{ DEMUX
+
+instance eetSemigroupalFunction :: Semigroupal (->) Either Either Tuple (->) where
+  pzip (f /\ g) = bimap f g
+
+instance eetUnitalFunction :: Unital (->) Void Void Unit (->) where
+  punit = const absurd
+
+instance eetMonoidalFunction :: Monoidal (->) Either Void Either Void Tuple Unit (->)
+
+-- }}}
+
+-- }}}
+
+-- {{{ JOKER
+
+-- {{{ MUX
+
+instance tttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Joker f) where
+  pzip (Joker f /\ Joker g) = Joker $ (/\) <$> f <*> g
+
+instance tttUnitalJoker :: Applicative f => Unital (->) Unit Unit Unit (Joker f) where
+  punit = Joker <<< pure
+
+instance tttMonoidalJoker :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Joker f)
+
+-- }}}
+
+-- {{{ DEMUX
+
+instance eetSemigroupalJoker :: Alt f => Semigroupal (->) Either Either Tuple (Joker f) where
+  pzip (Joker f /\ Joker g) = Joker $ (Left <$> f) <|> (Right <$> g)
+
+instance eetUnitalJoker :: Alternative f => Unital (->) Void Void Unit (Joker f) where
+  punit = const $ Joker $ empty
+
+instance eetMonoidalJoker :: Alternative f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
+
+-- }}}
+
+-- {{{ DIVERGE
+
+instance eeeSemigroupalJoker :: Functor f => Semigroupal (->) Either Either Either (Joker f) where
+  pzip (Left (Joker f)) = Joker $ map Left f
+  pzip (Right (Joker f)) = Joker $ map Right f
+
+instance eeeUnitalJoker :: Functor f => Unital (->) Void Void Void (Joker f) where
+  punit = absurd
+
+instance eeeMonoidalJoker :: Functor f => Monoidal (->) Either Void Either Void Either Void (Joker f)
+
+-- }}}
+
+-- }}}
+
+-- {{{ STAR
+
+-- {{{ MUX
+
+instance tttSemigroupalStar :: Apply f => Semigroupal (->) Tuple Tuple Tuple (Star f) where
+  pzip (Star f /\ Star g) = Star $ \(a /\ b) -> (/\) <$> f a <*> g b
+
+instance tttUnitalStar :: Applicative f => Unital (->) Unit Unit Unit (Star f) where
+  punit = const $ Star $ pure
+
+instance tttMonoidalStar :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Star f)
+
+-- }}}
+
+-- {{{ DEMUX
+
+instance eetSemigroupalStar :: Functor f => Semigroupal (->) Either Either Tuple (Star f) where
+  pzip (Star f /\ Star g) = Star $ either (map Left <<< f) (map Right <<< g)
+
+instance eetUnitalStar :: Functor f => Unital (->) Void Void Unit (Star f) where
+  punit = const $ Star $ absurd
+
+instance eetMonoidalStar :: Functor f => Monoidal (->) Either Void Either Void Tuple Unit (Star f)
+
+-- }}}
+
+-- {{{ DIVERGE
+
+instance eeeSemigroupalStar :: Alternative f => Semigroupal (->) Either Either Either (Star f) where
+  pzip (Left (Star f)) = Star $ either (map Left <<< f) (const empty)
+  pzip (Right (Star f)) = Star $ either (const empty) (map Right <<< f)
+
+instance eeeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) where
+  punit = absurd
+
+instance eeeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
+
+-- }}}
+
+-- }}}
 
 -- }}}
