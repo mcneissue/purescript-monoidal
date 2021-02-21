@@ -150,22 +150,22 @@ cosplice = un Op combine
 
 class Unital c l r o p
   where
-  punit :: c o (p l r)
+  introduce :: c o (p l r)
 
 terminal :: ∀ p a. Profunctor p => Unital (->) Unit Unit Unit p => p a Unit
-terminal = lcmap (const unit) $ punit unit
+terminal = lcmap (const unit) $ introduce unit
 
 ppure :: ∀ p a. Profunctor p => Unital (->) Unit Unit Unit p => Strong p => p a a
-ppure = dimap (unit /\ _) snd $ first $ (punit unit :: p Unit Unit)
+ppure = dimap (unit /\ _) snd $ first $ (introduce unit :: p Unit Unit)
 
 initial :: ∀ p a. Profunctor p => Unital (->) Void Void Unit p => p Void a
-initial = rmap absurd $ punit unit
+initial = rmap absurd $ introduce unit
 
 poly :: ∀ p a b. Profunctor p => Unital (->) Unit Void Unit p => p a b
-poly = dimap (const unit) absurd $ punit unit
+poly = dimap (const unit) absurd $ introduce unit
 
 mono :: ∀ p. Unital (->) Void Unit Unit p => p Void Unit
-mono = punit unit
+mono = introduce unit
 
 -- }}}
 
@@ -199,7 +199,7 @@ instance tttSemigroupalStrongCategory :: (Strong p, Semigroupoid p) => Semigroup
   combine (StrongCategory pab /\ StrongCategory pcd) = StrongCategory (second pcd <<< first pab)
 
 instance tttUnitalStrongCategory :: (Profunctor p, Category p) => Unital (->) Unit Unit Unit (StrongCategory p) where
-  punit _ = StrongCategory identity
+  introduce _ = StrongCategory identity
 
 instance tttMonoidalStrongCategory :: (Strong p, Category p) => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (StrongCategory p)
 
@@ -217,7 +217,7 @@ instance tttsemigroupalTuple :: Semigroupal (->) Tuple Tuple Tuple Tuple
 
 instance tttunitalTuple :: Unital (->) Unit Unit Unit Tuple
   where
-  punit = runit.bwd
+  introduce = runit.bwd
 
 instance tttMonoidalTuple :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit Tuple
 
@@ -231,7 +231,7 @@ instance eeeSemigroupalTuple :: Semigroupal (->) Either Either Either Tuple
 
 instance eeeUnitalTuple :: Unital (->) Void Void Void Tuple
   where
-  punit = absurd
+  introduce = absurd
 
 instance eeeMonoidalTuple :: Monoidal (->) Either Void Either Void Either Void Tuple
 
@@ -251,7 +251,7 @@ instance eeeSemigroupalEither :: Semigroupal (->) Either Either Either Either
 
 instance eeeUnitalEither :: Unital (->) Void Void Void Either
   where
-  punit = runit.bwd
+  introduce = runit.bwd
 
 instance eeeMonoidalEither :: Monoidal (->) Either Void Either Void Either Void Either
 
@@ -265,7 +265,7 @@ instance ettSemigroupalEither :: Semigroupal (->) Either Tuple Tuple Either
 
 instance ettUnitalEither :: Unital (->) Void Unit Unit Either
   where
-  punit = pure
+  introduce = pure
 
 instance ettMonoidalEither :: Monoidal (->) Either Void Tuple Unit Tuple Unit Either
 
@@ -284,7 +284,7 @@ instance tttSemigroupalFunction :: Semigroupal (->) Tuple Tuple Tuple (->) where
   combine = biapply
 
 instance tttUnitalFunction :: Unital (->) Unit Unit Unit (->) where
-  punit = pure
+  introduce = pure
 
 instance tttMonoidalFunction :: Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (->)
 
@@ -296,7 +296,7 @@ instance eetSemigroupalFunction :: Semigroupal (->) Either Either Tuple (->) whe
   combine (f /\ g) = bimap f g
 
 instance eetUnitalFunction :: Unital (->) Void Void Unit (->) where
-  punit = const absurd
+  introduce = const absurd
 
 instance eetMonoidalFunction :: Monoidal (->) Either Void Either Void Tuple Unit (->)
 
@@ -312,7 +312,7 @@ instance tttSemigroupalJoker :: Apply f => Semigroupal (->) Tuple Tuple Tuple (J
   combine (Joker f /\ Joker g) = Joker $ (/\) <$> f <*> g
 
 instance tttUnitalJoker :: Applicative f => Unital (->) Unit Unit Unit (Joker f) where
-  punit = Joker <<< pure
+  introduce = Joker <<< pure
 
 instance tttMonoidalJoker :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Joker f)
 
@@ -324,7 +324,7 @@ instance eetSemigroupalJoker :: Alt f => Semigroupal (->) Either Either Tuple (J
   combine (Joker f /\ Joker g) = Joker $ (Left <$> f) <|> (Right <$> g)
 
 instance eetUnitalJoker :: Alternative f => Unital (->) Void Void Unit (Joker f) where
-  punit = const $ Joker $ empty
+  introduce = const $ Joker $ empty
 
 instance eetMonoidalJoker :: Alternative f => Monoidal (->) Either Void Either Void Tuple Unit (Joker f)
 
@@ -337,7 +337,7 @@ instance eeeSemigroupalJoker :: Functor f => Semigroupal (->) Either Either Eith
   combine (Right (Joker f)) = Joker $ map Right f
 
 instance eeeUnitalJoker :: Functor f => Unital (->) Void Void Void (Joker f) where
-  punit = absurd
+  introduce = absurd
 
 instance eeeMonoidalJoker :: Functor f => Monoidal (->) Either Void Either Void Either Void (Joker f)
 
@@ -353,7 +353,7 @@ instance tttSemigroupalStar :: Apply f => Semigroupal (->) Tuple Tuple Tuple (St
   combine (Star f /\ Star g) = Star $ \(a /\ b) -> (/\) <$> f a <*> g b
 
 instance tttUnitalStar :: Applicative f => Unital (->) Unit Unit Unit (Star f) where
-  punit = const $ Star $ pure
+  introduce = const $ Star $ pure
 
 instance tttMonoidalStar :: Applicative f => Monoidal (->) Tuple Unit Tuple Unit Tuple Unit (Star f)
 
@@ -365,7 +365,7 @@ instance eetSemigroupalStar :: Functor f => Semigroupal (->) Either Either Tuple
   combine (Star f /\ Star g) = Star $ either (map Left <<< f) (map Right <<< g)
 
 instance eetUnitalStar :: Functor f => Unital (->) Void Void Unit (Star f) where
-  punit = const $ Star $ absurd
+  introduce = const $ Star $ absurd
 
 instance eetMonoidalStar :: Functor f => Monoidal (->) Either Void Either Void Tuple Unit (Star f)
 
@@ -378,7 +378,7 @@ instance eeeSemigroupalStar :: Alternative f => Semigroupal (->) Either Either E
   combine (Right (Star f)) = Star $ either (const empty) (map Right <<< f)
 
 instance eeeUnitalStar :: Alternative f => Unital (->) Void Void Void (Star f) where
-  punit = absurd
+  introduce = absurd
 
 instance eeeMonoidalStar :: Alternative f => Monoidal (->) Either Void Either Void Either Void (Star f)
 
