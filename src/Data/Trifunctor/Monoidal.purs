@@ -19,7 +19,7 @@ class (Associative t1 c, Associative t2 c, Associative t3 c, Associative to c) <
 
 class Unital c i1 i2 i3 o p
   where
-  punit :: c o (p i1 i2 i3)
+  introduce :: c o (p i1 i2 i3)
 
 -- }}}
 
