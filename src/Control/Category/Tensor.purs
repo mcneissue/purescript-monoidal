@@ -2,6 +2,7 @@ module Control.Category.Tensor where
 
 import Prelude
 
+import Data.Bifunctor (class Bifunctor)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
 import Data.Op (Op(..))
@@ -14,7 +15,7 @@ type Iso p a b = { fwd :: p a b, bwd :: p b a }
 flipIso :: forall a b. Iso (->) a b -> Iso Op a b
 flipIso { fwd, bwd } = { fwd: Op bwd, bwd: Op fwd }
 
-class Associative t p
+class (Category p, Bifunctor t) <= Associative t p
   where
   assoc :: forall a b c. Iso p (t a (t b c)) (t (t a b) c)
 
