@@ -10,11 +10,6 @@ import Data.Tuple (Tuple(..), fst, snd)
 import Data.Tuple (swap) as T
 import Data.Tuple.Nested (type (/\), (/\))
 
-type Iso p a b = { fwd :: p a b, bwd :: p b a }
-
-flipIso :: ∀ a b. Iso (->) a b -> Iso Op a b
-flipIso { fwd, bwd } = { fwd: Op bwd, bwd: Op fwd }
-
 class (Category p, Category q) <= GBifunctor p q r t | t r -> p q
   where
   gbimap :: ∀ a b c d. p a b -> q c d -> r (t a c) (t b d)
@@ -24,6 +19,11 @@ grmap = gbimap identity
 
 glmap :: ∀ p q r t a a' b. GBifunctor p q r t => p a a' -> r (t a b) (t a' b)
 glmap = flip gbimap identity
+
+type Iso p a b = { fwd :: p a b, bwd :: p b a }
+
+flipIso :: ∀ a b. Iso (->) a b -> Iso Op a b
+flipIso { fwd, bwd } = { fwd: Op bwd, bwd: Op fwd }
 
 class (Category p, GBifunctor p p p t) <= Associative t p
   where
