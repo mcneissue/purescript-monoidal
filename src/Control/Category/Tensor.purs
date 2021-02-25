@@ -15,15 +15,21 @@ type Iso p a b = { fwd :: p a b, bwd :: p b a }
 flipIso :: ∀ a b. Iso (->) a b -> Iso Op a b
 flipIso { fwd, bwd } = { fwd: Op bwd, bwd: Op fwd }
 
-class (Category p, Category q) <= GBifunctor p q t
+class (Category p, Category q) <= GBifunctor p q r t | t r -> p q
   where
-  gbimap :: ∀ a b c d. p a b -> p c d -> q (t a c) (t b d)
+  gbimap :: ∀ a b c d. p a b -> q c d -> r (t a c) (t b d)
 
-class (Category p, GBifunctor p p t) <= Associative t p
+grmap :: ∀ p q r t a b b'. GBifunctor p q r t => q b b' -> r (t a b) (t a b')
+grmap = gbimap identity
+
+glmap :: ∀ p q r t a a' b. GBifunctor p q r t => p a a' -> r (t a b) (t a' b)
+glmap = flip gbimap identity
+
+class (Category p, GBifunctor p p p t) <= Associative t p
   where
   assoc :: ∀ a b c. Iso p (t a (t b c)) (t (t a b) c)
 
-instance gbifunctorFlip :: GBifunctor (->) (->) t => GBifunctor Op Op t
+instance gbifunctorFlip :: GBifunctor (->) (->) (->) t => GBifunctor Op Op Op t
   where
   gbimap (Op f) (Op g) = Op $ gbimap f g
 
@@ -31,7 +37,7 @@ instance associativeFlip :: Associative t (->) => Associative t Op
   where
   assoc = flipIso assoc
 
-instance gbifunctorTuple :: GBifunctor (->) (->) Tuple
+instance gbifunctorTuple :: GBifunctor (->) (->) (->) Tuple
   where
   gbimap = bimap
 
@@ -42,7 +48,7 @@ instance associativeTuple :: Associative Tuple (->)
     , bwd: \((a /\ b) /\ c) -> a /\ b /\ c
     }
 
-instance gbifunctorEither :: GBifunctor (->) (->) Either
+instance gbifunctorEither :: GBifunctor (->) (->) (->) Either
   where
   gbimap = bimap
 
