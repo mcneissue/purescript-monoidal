@@ -9,5 +9,6 @@ pkgs.mkShell {
     spago
     nodePackages.purescript-language-server
     nodePackages.bower
+    nodePackages.pulp
   ];
 }
