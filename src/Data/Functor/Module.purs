@@ -1,11 +1,11 @@
 module Data.Functor.Module where
 
-class LeftModule c t f
+class LeftModule cat t1 f
   where
-  lstrength :: forall a x. c (f a) (f (t a x))
+  lstrength :: forall a x. cat (f a) (f (t1 a x))
 
-class RightModule c t f
+class RightModule cat t1 f
   where
-  rstrength :: forall a x. c (f a) (f (t x a))
+  rstrength :: forall a x. cat (f a) (f (t1 x a))
 
-class (LeftModule c t f, RightModule c t f) <= Bimodule c t f
+class (LeftModule cat t1 f, RightModule cat t1 f) <= Bimodule cat t1 f
