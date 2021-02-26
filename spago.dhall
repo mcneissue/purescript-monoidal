@@ -3,7 +3,7 @@ Welcome to a Spago project!
 You can edit this file as you like.
 -}
 { name = "monoidal"
-, dependencies = [ "profunctor", "either", "tuples", "effect" ]
+, dependencies = [ "profunctor", "either", "tuples", "effect", "these" ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 , license = "MIT"
