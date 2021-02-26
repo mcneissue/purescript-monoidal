@@ -4,27 +4,41 @@ import Control.Category.Tensor (class Associative, class Tensor)
 
 -- {{{ SEMIGROUPAL
 
-class (Associative t1 c, Associative t2 c, Associative t3 c, Associative to c) <= Semigroupal c t1 t2 t3 to p
+class
+  ( Associative t1 cat
+  , Associative t2 cat
+  , Associative t3 cat
+  , Associative to cat
+  ) <=
+  Semigroupal cat t1 t2 t3 to f
   where
   combine :: ∀ x x' y y' z z'.
-    c
+    cat
       (to
-        (p     x         y         z   )
-        (p       x'        y'        z'))
-        (p (t1 x x') (t2 y y') (t3 z z'))
+        (f     x         y         z   )
+        (f       x'        y'        z'))
+        (f (t1 x x') (t2 y y') (t3 z z'))
 
 -- }}}
 
 -- {{{ UNITAL
 
-class Unital c i1 i2 i3 o p
+class Unital cat i1 i2 i3 o f
   where
-  introduce :: c o (p i1 i2 i3)
+  introduce :: cat o (f i1 i2 i3)
 
 -- }}}
 
 -- {{{ MONOIDAL
 
-class (Tensor t1 i1 c, Tensor t2 i2 c, Tensor t3 i3 c, Tensor to io c, Semigroupal c t1 t2 t3 to p, Unital c i1 i2 i3 io p) <= Monoidal c t1 i1 t2 i2 t3 i3 to io p
+class
+  ( Tensor t1 i1 cat
+  , Tensor t2 i2 cat
+  , Tensor t3 i3 cat
+  , Tensor to io cat
+  , Semigroupal cat t1 t2 t3 to f
+  , Unital cat i1 i2 i3 io f
+  ) <=
+  Monoidal cat t1 i1 t2 i2 t3 i3 to io f
 
 -- }}}

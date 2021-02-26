@@ -5,173 +5,53 @@ import Prelude hiding ((&&),(||))
 import Control.Alt (class Alt, alt, (<|>))
 import Control.Alternative (class Plus, empty)
 import Control.Biapply (biapply)
-import Control.Category.Tensor (class Associative, class Tensor, assoc, dup, merge, runit, swap)
+import Control.Category.Tensor (class Associative, class Tensor, assoc, runit, swap)
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
-import Data.Either.Nested (type (\/))
-import Data.Maybe (Maybe, maybe)
-import Data.Newtype (un, class Newtype)
-import Data.Op (Op(..))
-import Data.Profunctor (class Profunctor, dimap, lcmap, rmap)
+import Data.Newtype (class Newtype)
+import Data.Profunctor (class Profunctor, dimap)
 import Data.Profunctor.Joker (Joker(..))
 import Data.Profunctor.Star (Star(..))
 import Data.Profunctor.Strong (class Strong, first, second)
-import Data.Tuple (Tuple, curry, fst, snd)
-import Data.Tuple.Nested (type (/\), (/\))
+import Data.Tuple (Tuple, fst, snd)
+import Data.Tuple.Nested ((/\))
 
 -- {{{ SEMIGROUPAL
 
-class (Associative l c, Associative r c, Associative o c) <= Semigroupal c l r o p
+class
+  ( Associative t1 cat
+  , Associative t2 cat
+  , Associative to cat
+  ) <=
+  Semigroupal cat t1 t2 to f
   where
-  combine :: ∀ d e f g.
-    c (o (p d e) (p f g)) (p (l d f) (r e g))
-
--- Mux     = (×) (×) (×)
--- Demux   = (+) (+) (×)
--- Switch  = (×) (+) (×)
--- Splice  = (+) (×) (×)
--- Diverge = (+) (+) (+)
--- Trivial = (×) (+) (+)
-
--- Mux
-mux :: ∀ p a b c d. Semigroupal (->) Tuple Tuple Tuple p => p a b -> p c d -> p (a /\ c) (b /\ d)
-mux = curry combine
-
-infixr 5 mux as &&
-
-zip :: ∀ p x a b. Profunctor p => Semigroupal (->) Tuple Tuple Tuple p => p x a -> p x b -> p x (a /\ b)
-zip x y = lcmap dup $ x && y
-
--- Demux
-demux :: ∀ p a b c d. Semigroupal (->) Either Either Tuple p => p a b -> p c d -> p (a \/ c) (b \/ d)
-demux = curry combine
-
-infixr 4 demux as ||
-
-fanin :: ∀ p x a b. Profunctor p => Semigroupal (->) Either Either Tuple p => p a x -> p b x -> p (a \/ b) x
-fanin x y = rmap merge $ x || y
-
--- Switch
-switch :: ∀ p a b c d. Semigroupal (->) Tuple Either Tuple p => p a b -> p c d -> p (a /\ c) (b \/ d)
-switch = curry combine
-
-infixr 5 switch as &|
-
-union :: ∀ p x a b. Profunctor p => Semigroupal (->) Tuple Either Tuple p => p x a -> p x b -> p x (a \/ b)
-union x y = lcmap dup $ x &| y
-
-divide :: ∀ p x a b. Profunctor p => Semigroupal (->) Tuple Either Tuple p => p a x -> p b x -> p (a /\ b) x
-divide x y = rmap merge $ x &| y
-
--- Splice
-splice :: ∀ p a b c d. Semigroupal (->) Either Tuple Tuple p => p a b -> p c d -> p (a \/ c) (b /\ d)
-splice = curry combine
-
-infixr 5 splice as |&
-
--- Diverge
-diverge :: ∀ p a b c d. Semigroupal (->) Either Either Either p => p a b \/ p c d -> p (a \/ c) (b \/ d)
-diverge = combine
-
-contramapMaybe :: ∀ p a b x. Profunctor p => Semigroupal (->) Either Either Either p => (a -> Maybe b) -> p b x -> p a x
-contramapMaybe f = dimap (maybe (Right unit) Left <<< f) merge <<< ultraleft
-
--- {{{ ULTRA STRENGTHS
-
--- NB: The thing to notice about these is that in a profunctor, there is a "trivially monoidal" tensor on each source category
--- On the contravariant end, this is the (/\) tensor, on the covariant end it is the (\/) tensor. When we take the output tensor
--- to be (\/), we can pick the source tensors in two ways such that precisely one is trivial and one is not. Doing this twice lets
--- us "dodge" a quantified variable past the variables of an actual `p a b`, so that you get a `p a b -> p (t1 a x) (t2 b x)`, i.e.
--- a strength.
-
-zig :: ∀ p t a b x. Profunctor p => Semigroupal (->) Tuple t Either p => p x a \/ p x b -> p x (t a b)
-zig = lcmap dup <<< combine
-
-zag :: ∀ p t a b x. Profunctor p => Semigroupal (->) t Either Either p => p a x \/ p b x -> p (t a b) x
-zag = rmap merge <<< combine
-
-ultrafirst :: ∀ p a b x y.
-  Profunctor p =>
-  Semigroupal (->) Tuple Tuple  Either p =>
-  p a b -> p (a /\ x) (b /\ y)
-ultrafirst = zag <<< Left <<< zig <<< Left
-
-ultrasecond :: ∀ p a b x y.
-  Profunctor p =>
-  Semigroupal (->) Tuple Tuple  Either p =>
-  p a b -> p (x /\ a) (y /\ b)
-ultrasecond = zag <<< Right <<< zig <<< Right
-
-ultraleft :: ∀ p a b x y.
-  Profunctor p =>
-  Semigroupal (->) Either Either Either p =>
-  p a b -> p (a \/ x) (b \/ y)
-ultraleft = zag <<< Left <<< zig <<< Left
-
-ultraright :: ∀ p a b x y.
-  Profunctor p =>
-  Semigroupal (->) Either Either Either p =>
-  p a b -> p (x \/ a) (y \/ b)
-ultraright = zag <<< Right <<< zig <<< Right
-
--- }}}
-
--- Comux
-comux :: ∀ p a b c d. Semigroupal Op Tuple Tuple Tuple p => p (a /\ c) (b /\ d) -> p a b /\ p c d
-comux = un Op combine
-
-undivide :: ∀ p x a b. Profunctor p => Semigroupal Op Tuple Tuple Tuple p => p (a /\ b) x -> p a x /\ p b x
-undivide = comux <<< rmap dup
-
--- Codemux
-codemux :: ∀ p a b c d. Semigroupal Op Either Either Tuple p => p (a \/ c) (b \/ d) -> p a b /\ p c d
-codemux = un Op combine
-
-partition :: ∀ p x a b. Profunctor p => Semigroupal Op Either Either Tuple p => p x (a \/ b) -> p x a /\ p x b
-partition = codemux <<< lcmap merge
-
--- Coswitch
-coswitch :: ∀ p a b c d. Semigroupal Op Either Tuple Tuple p => p (a \/ c) (b /\ d) -> p a b /\ p c d
-coswitch = un Op combine
-
-unfanin :: ∀ p x a b. Profunctor p => Semigroupal Op Either Tuple Tuple p => p (a \/ b) x -> p a x /\ p b x
-unfanin = coswitch <<< rmap dup
-
-unzip :: ∀ p x a b. Profunctor p => Semigroupal Op Either Tuple Tuple p => p x (a /\ b) -> p x a /\ p x b
-unzip = coswitch <<< lcmap merge
-
--- Cosplice
-cosplice :: ∀ p a b c d. Semigroupal Op Tuple Either Tuple p => p (a /\ c) (b \/ d) -> p a b /\ p c d
-cosplice = un Op combine
+  combine :: ∀ x x' y y'.
+    cat
+      (to
+        (f     x         y   )
+        (f       x'        y'))
+        (f (t1 x x') (t2 y y'))
 
 -- }}}
 
 -- {{{ UNITAL
 
-class Unital c l r o p
+class Unital cat i1 i2 io f
   where
-  introduce :: c o (p l r)
-
-terminal :: ∀ p a. Profunctor p => Unital (->) Unit Unit Unit p => p a Unit
-terminal = lcmap (const unit) $ introduce unit
-
-ppure :: ∀ p a. Profunctor p => Unital (->) Unit Unit Unit p => Strong p => p a a
-ppure = dimap (unit /\ _) snd $ first $ (introduce unit :: p Unit Unit)
-
-initial :: ∀ p a. Profunctor p => Unital (->) Void Void Unit p => p Void a
-initial = rmap absurd $ introduce unit
-
-poly :: ∀ p a b. Profunctor p => Unital (->) Unit Void Unit p => p a b
-poly = dimap (const unit) absurd $ introduce unit
-
-mono :: ∀ p. Unital (->) Void Unit Unit p => p Void Unit
-mono = introduce unit
+  introduce :: cat io (f i1 i2)
 
 -- }}}
 
 -- {{{ MONOIDAL
 
-class (Tensor l il c, Tensor r ir c, Tensor o io c, Semigroupal c l r o p, Unital c il ir io p) <= Monoidal c l il r ir o io p
+class
+  ( Tensor t1 i1 cat
+  , Tensor t2 i2 cat
+  , Tensor to io cat
+  , Semigroupal cat t1 t2 to f
+  , Unital cat i1 i2 io f
+  ) <=
+  Monoidal cat t1 i1 t2 i2 to io f
 
 -- }}}
 
