@@ -1,4 +1,4 @@
-module Functor.Module where
+module Data.Functor.Module where
 
 class LeftModule c t f
   where

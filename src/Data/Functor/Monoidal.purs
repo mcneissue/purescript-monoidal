@@ -1,4 +1,4 @@
-module Functor.Monoidal where
+module Data.Functor.Monoidal where
 
 import Prelude
 
