@@ -3,9 +3,9 @@ Welcome to a Spago project!
 You can edit this file as you like.
 -}
 { name = "monoidal"
-, dependencies = [ "profunctor", "either", "tuples", "effect", "these" ]
+, dependencies = [ "profunctor", "either", "tuples", "these" ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, sources = [ "src/**/*.purs" ]
 , license = "MIT"
 , repository = "https://github.com/mcneissue/purescript-monoidal"
 }
