@@ -13,6 +13,7 @@ import Data.Profunctor (class Profunctor, dimap)
 import Data.Profunctor.Joker (Joker(..))
 import Data.Profunctor.Star (Star(..))
 import Data.Profunctor.Strong (class Strong, first, second)
+import Data.These (These(..))
 import Data.Tuple (Tuple, fst, snd)
 import Data.Tuple.Nested ((/\))
 
@@ -153,6 +154,15 @@ instance ettMonoidalEither :: Monoidal (->) Either Void Tuple Unit Tuple Unit Ei
 
 -- NB: There is no point in doing both `×, +` and `+, ×` for a symmetric bifunctor, you can just get one from
 -- the other using swap
+
+instance sttSemigroupalEither :: Semigroupal (->) These Tuple Tuple Either
+  where
+  combine (Left x /\ Left y) = Left $ Both x y
+  combine (Left x /\ Right _) = Left $ This x
+  combine (Right _ /\ Left y) = Left $ That y
+  combine (Right x /\ Right y) = Right $ x /\ y
+
+instance sttMonoidalEither :: Monoidal (->) These Void Tuple Unit Tuple Unit Either
 
 -- }}}
 
