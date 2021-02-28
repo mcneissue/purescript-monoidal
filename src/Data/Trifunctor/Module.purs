@@ -2,10 +2,10 @@ module Data.Trifunctor.Module where
 
 class LeftModule cat t1 t2 t3 f
   where
-  lstrength :: forall a b c x. cat (f a b c) (f (t1 a x) (t2 b x) (t3 c x))
+  lstrength :: ∀ a b c x. cat (f a b c) (f (t1 a x) (t2 b x) (t3 c x))
 
 class RightModule cat t1 t2 t3 f
   where
-  rstrength :: forall a b c x. cat (f a b c) (f (t1 x a) (t2 x b) (t3 x c))
+  rstrength :: ∀ a b c x. cat (f a b c) (f (t1 x a) (t2 x b) (t3 x c))
 
 class (LeftModule cat t1 t2 t3 f, RightModule cat t1 t2 t3 f) <= Bimodule cat t1 t2 t3 f
