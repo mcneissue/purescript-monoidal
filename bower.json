@@ -14,10 +14,9 @@
         "output"
     ],
     "dependencies": {
-        "purescript-effect": "^v2.0.1",
-        "purescript-either": "^v4.1.1",
-        "purescript-profunctor": "^v4.1.0",
-        "purescript-these": "^v4.0.0",
-        "purescript-tuples": "^v5.1.0"
+        "purescript-either": "^v5.0.0",
+        "purescript-profunctor": "^v5.0.0",
+        "purescript-these": "^v5.0.0",
+        "purescript-tuples": "^v6.0.0"
     }
 }
