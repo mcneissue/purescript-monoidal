@@ -1,14 +1,15 @@
 let
   sources = import ./nix/sources.nix;
   pkgs = import sources.nixpkgs-unstable {};
+  epn = import sources.easy-purescript-nix { inherit pkgs; };
 in
 pkgs.mkShell {
-  buildInputs = with pkgs; [
+  buildInputs = with pkgs; with epn; [
     purescript
-    nodejs
     spago
-    nodePackages.purescript-language-server
+    pulp
+    nodejs
     nodePackages.bower
-    nodePackages.pulp
+    nodePackages.purescript-language-server
   ];
 }
