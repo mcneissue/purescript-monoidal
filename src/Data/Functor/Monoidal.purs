@@ -3,6 +3,7 @@ module Data.Functor.Monoidal where
 import Prelude
 
 import Control.Alt (class Alt, alt)
+import Control.Category.Kinds (KHom)
 import Control.Category.Tensor (class Associative, class Tensor)
 import Control.Plus (class Plus, empty)
 import Data.Either (Either(..))
@@ -11,6 +12,12 @@ import Data.Tuple.Nested ((/\))
 
 -- {{{ SEMIGROUPAL
 
+class Semigroupal :: ∀ k.
+  KHom k
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> (k -> k)
+  -> Constraint
 class
   ( Associative t1 cat
   , Associative to cat
@@ -28,6 +35,12 @@ class
 
 -- {{{ UNITAL
 
+class Unital :: ∀ k.
+  KHom k
+  -> k
+  -> k
+  -> (k -> k)
+  -> Constraint
 class Unital cat i1 io f
   where
   introduce :: cat io (f i1)
@@ -36,6 +49,12 @@ class Unital cat i1 io f
 
 -- {{{ MONOIDAL
 
+class Monoidal :: ∀ k.
+  KHom k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k) -> k
+  -> (k -> k)
+  -> Constraint
 class
   ( Tensor t1 i1 cat
   , Tensor to io cat

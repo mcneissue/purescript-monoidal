@@ -5,6 +5,7 @@ import Prelude hiding ((&&),(||))
 import Control.Alt (class Alt, alt, (<|>))
 import Control.Alternative (class Plus, empty)
 import Control.Biapply (biapply)
+import Control.Category.Kinds (KHom)
 import Control.Category.Tensor (class Associative, class Tensor, assoc, runit, swap)
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
@@ -19,6 +20,13 @@ import Data.Tuple.Nested ((/\))
 
 -- {{{ SEMIGROUPAL
 
+class Semigroupal :: ∀ k.
+  KHom k
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> Constraint
 class
   ( Associative t1 cat
   , Associative t2 cat
@@ -37,6 +45,13 @@ class
 
 -- {{{ UNITAL
 
+class Unital :: ∀ k.
+  KHom k
+  -> k
+  -> k
+  -> k
+  -> (k -> k -> k)
+  -> Constraint
 class Unital cat i1 i2 io f
   where
   introduce :: cat io (f i1 i2)
@@ -45,6 +60,13 @@ class Unital cat i1 i2 io f
 
 -- {{{ MONOIDAL
 
+class Monoidal :: ∀ k.
+  KHom k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k)
+  -> Constraint
 class
   ( Tensor t1 i1 cat
   , Tensor t2 i2 cat
@@ -66,6 +88,7 @@ instance trivial :: Profunctor p => Semigroupal (->) Tuple Either Either p
   combine = either (dimap fst Left) (dimap snd Right)
 
 -- Strong Category
+newtype StrongCategory :: ∀ k. KHom k -> KHom k
 newtype StrongCategory p a b = StrongCategory (p a b)
 
 derive instance newtypeStrongCategory :: Newtype (StrongCategory p a b) _

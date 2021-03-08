@@ -2,6 +2,7 @@ module Control.Category.Tensor where
 
 import Prelude
 
+import Control.Category.Kinds (KHom)
 import Data.Bifunctor (bimap)
 import Data.Either (Either(..), either)
 import Data.Either.Nested (type (\/))
@@ -17,6 +18,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 
 -- {{{ GBIFUNCTOR
 
+class GBifunctor :: ∀ k1 k2 k3. KHom k1 -> KHom k2 -> KHom k3 -> (k1 -> k2 -> k3) -> Constraint
 class (Category p, Category q) <= GBifunctor p q r t | t r -> p q
   where
   gbimap :: ∀ a b c d. p a b -> q c d -> r (t a c) (t b d)
@@ -49,6 +51,7 @@ instance gbifunctorThesePointed :: GBifunctor (Star Maybe) (Star Maybe) (Star Ma
 
 -- }}}
 
+type Iso :: ∀ k. KHom k -> KHom k
 type Iso p a b = { fwd :: p a b, bwd :: p b a }
 
 flipIso :: ∀ a b. Iso (->) a b -> Iso Op a b
@@ -56,6 +59,7 @@ flipIso { fwd, bwd } = { fwd: Op bwd, bwd: Op fwd }
 
 -- {{{ ASSOCIATIVE
 
+class Associative :: ∀ k. (k -> k -> k) -> KHom k -> Constraint
 class (Category p, GBifunctor p p p t) <= Associative t p
   where
   assoc :: ∀ a b c. Iso p (t a (t b c)) (t (t a b) c)
@@ -99,6 +103,7 @@ instance associativeThese :: Associative These (->)
 
 -- {{{ TENSOR
 
+class Tensor :: ∀ k. (k -> k -> k) -> k -> KHom k -> Constraint
 class Associative t p <= Tensor t i p | t -> i
   where
   lunit :: ∀ a. Iso p (t i a) a
@@ -140,6 +145,7 @@ instance tensorThese :: Tensor These Void (->)
 
 -- {{{ SYMMETRIC
 
+class Symmetric :: ∀ k. (k -> k -> k) -> KHom k -> Constraint
 class Associative t p <= Symmetric t p
   where
   swap :: ∀ a b. p (t a b) (t b a)
@@ -168,6 +174,7 @@ instance symmetricThese :: Symmetric These (->)
 
 -- {{{ CARTESIAN
 
+class Cartesian :: ∀ k. (k -> k -> k) -> k -> KHom k -> Constraint
 class (Symmetric t p, Tensor t i p) <= Cartesian t i p | i -> t, t -> i
   where
   diagonal :: ∀ a. p a (t a a)

@@ -1,9 +1,18 @@
 module Data.Trifunctor.Monoidal where
 
+import Control.Category.Kinds (KHom)
 import Control.Category.Tensor (class Associative, class Tensor)
 
 -- {{{ SEMIGROUPAL
 
+class Semigroupal :: ∀ k.
+  KHom k
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> (k -> k -> k)
+  -> (k -> k -> k -> k)
+  -> Constraint
 class
   ( Associative t1 cat
   , Associative t2 cat
@@ -23,6 +32,14 @@ class
 
 -- {{{ UNITAL
 
+class Unital :: ∀ k.
+  KHom k
+  -> k
+  -> k
+  -> k
+  -> k
+  -> (k -> k -> k -> k)
+  -> Constraint
 class Unital cat i1 i2 i3 o f
   where
   introduce :: cat o (f i1 i2 i3)
@@ -31,6 +48,14 @@ class Unital cat i1 i2 i3 o f
 
 -- {{{ MONOIDAL
 
+class Monoidal :: ∀ k.
+  KHom k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k) -> k
+  -> (k -> k -> k -> k)
+  -> Constraint
 class
   ( Tensor t1 i1 cat
   , Tensor t2 i2 cat
