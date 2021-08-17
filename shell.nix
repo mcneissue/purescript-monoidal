@@ -5,7 +5,7 @@ let
 in
 pkgs.mkShell {
   buildInputs = with pkgs; with epn; [
-    purescript
+    purs-0_14_3
     spago
     pulp
     nodejs
